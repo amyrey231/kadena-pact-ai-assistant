@@ -4,8 +4,7 @@ import { useState } from "react";
 import Editor from "@monaco-editor/react";
 import { 
   ShieldCheck, Play, AlertTriangle, CheckCircle, 
-  AlertOctagon, Info, ArrowRight, Sun, Moon, 
-  Laptop, Copy, Code2, Smartphone, Terminal, Trash2, FileCode
+  Sun, Moon, Laptop, Copy, Code2, Smartphone, Terminal, Trash2, FileCode, Zap
 } from "lucide-react";
 
 type Finding = {
@@ -14,6 +13,7 @@ type Finding = {
   issue_title: string;
   explanation: string;
   recommendation: string;
+  fv_property?: string;
 };
 
 const EXAMPLES = {
@@ -76,8 +76,14 @@ export default function Home() {
     navigator.clipboard.writeText(text);
   };
 
-  
- return (
+  const calculateScore = () => {
+    if (!findings || findings.length === 0) return 100;
+    const high = findings.filter(f => f.severity === 'High').length;
+    const med = findings.filter(f => f.severity === 'Medium').length;
+    return Math.max(0, 100 - (high * 30) - (med * 15));
+  };
+
+  return (
     <div className={`${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'} min-h-screen flex flex-col transition-colors duration-500 font-sans h-screen overflow-hidden`}>
       
       {/* --- Navbar --- */}
@@ -88,7 +94,7 @@ export default function Home() {
           </div>
           <div>
             <h1 className="text-base md:text-xl font-black tracking-tight uppercase">
-              Kadena Pact <span className="text-emerald-500">AI Assistant</span>
+              Kadena Pact <span className="text-emerald-500">AI Assistant v2.0</span>
             </h1>
             <p className="text-[8px] font-bold opacity-40 tracking-[0.3em] uppercase hidden sm:block">Professional Security Suite</p>
           </div>
@@ -107,7 +113,7 @@ export default function Home() {
             disabled={isAnalyzing || !pactCode}
             className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 md:px-8 py-2 md:py-3 rounded-xl font-bold transition-all shadow-xl shadow-emerald-500/20 disabled:opacity-20 disabled:grayscale group text-xs md:text-base"
           >
-            {isAnalyzing ? "Scanning..." : "Analyze"}
+            {isAnalyzing ? "Scanning..." : "Run Expert Audit"}
             {!isAnalyzing && <Play className="w-3 h-3 fill-current group-hover:translate-x-0.5 transition-transform" />}
           </button>
         </div>
@@ -156,7 +162,7 @@ export default function Home() {
                 lineNumbers: "on",
                 padding: { top: 10 },
                 wordWrap: "on",
-                automaticLayout: true, // Crucial for mobile resizing
+                automaticLayout: true,
                 scrollBeyondLastLine: false,
               }}
             />
@@ -166,6 +172,7 @@ export default function Home() {
         {/* Results Side */}
         <div className={`w-full lg:w-[450px] xl:w-[500px] flex flex-col h-[50vh] lg:h-full ${theme === 'dark' ? 'bg-slate-900/10' : 'bg-slate-50'}`}>
           <div className="p-4 md:p-8 flex-1 overflow-y-auto custom-scrollbar">
+            
             <div className="flex items-center justify-between mb-6 md:mb-10">
               <h2 className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Audit Findings</h2>
               {findings && (
@@ -174,6 +181,22 @@ export default function Home() {
                 </div>
               )}
             </div>
+
+            {/* NEW: Security Score Dashboard */}
+            {findings && (
+              <div className="mb-8 p-6 rounded-[2.5rem] bg-slate-900 border border-slate-800 flex items-center justify-between shadow-2xl">
+                <div>
+                  <p className="text-[10px] font-black opacity-40 uppercase tracking-widest mb-1">Trust Score</p>
+                  <h3 className={`text-5xl font-black ${calculateScore() > 70 ? 'text-emerald-500' : 'text-rose-500'}`}>{calculateScore()}</h3>
+                </div>
+                <div className="text-right">
+                   <div className={`px-3 py-1 rounded-full text-[10px] font-bold mb-2 ${calculateScore() > 70 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                     {calculateScore() > 70 ? 'SAFE' : 'RISKY'}
+                   </div>
+                   <p className="text-[10px] opacity-40 font-bold uppercase italic">AI Analysis v2.0</p>
+                </div>
+              </div>
+            )}
 
             {!findings && !isAnalyzing && (
               <div className="flex flex-col items-center justify-center py-10 text-center opacity-20 border-2 border-dashed border-slate-500/20 rounded-[2rem]">
@@ -215,6 +238,15 @@ export default function Home() {
                       </div>
                       <h3 className="font-black text-base mb-2 tracking-tight">{f.issue_title}</h3>
                       <p className="text-xs opacity-60 leading-relaxed mb-6">{f.explanation}</p>
+                      
+                      {/* NEW: Formal Verification Badge */}
+                      {f.fv_property && (
+                      <div className="mb-6 p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
+                         <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1 flex items-center gap-1"><Zap size={10}/> Formal Verification Property</p>
+                         <code className="text-[10px] text-emerald-400 font-mono italic">{f.fv_property}</code>
+                      </div>
+                      )}
+
                       <div className={`relative rounded-2xl p-4 font-mono text-[10px] border ${
                         theme === 'dark' ? 'bg-slate-950/80 border-slate-800 text-emerald-400' : 'bg-white border-slate-200 text-emerald-700'
                       }`}>
