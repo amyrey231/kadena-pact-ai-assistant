@@ -29,17 +29,46 @@ Return { "findings": [] } if the code is safe.`;
 
 export async function POST(req: Request) {
   try {
-    const { code } = await req.json();
+    // 1. Safe parsing of the incoming request
+    const body = await req.json();
+    const { code } = body;
+
+    // 2. Strict Input Validation (Prevents 500 errors if the frontend sends a blank request)
+    if (!code || typeof code !== 'string' || code.trim() === '') {
+      return NextResponse.json(
+        { error: "No valid Pact code provided for analysis." }, 
+        { status: 400 }
+      );
+    }
+
+    // 3. Upgraded to the 70B model for enterprise-grade Pact reasoning
     const response = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
-      messages: [{ role: "system", content: SYSTEM_PROMPT }, { role: "user", content: code }],
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT }, 
+        { role: "user", content: code }
+      ],
       response_format: { type: "json_object" }, 
     });
 
     const result = response.choices[0].message.content;
-    return NextResponse.json(JSON.parse(result || '{"findings": []}'));
+    
+    // 4. Fallback JSON parsing to guarantee the frontend never crashes
+    let parsedResult;
+    try {
+        parsedResult = JSON.parse(result || '{"findings": []}');
+    } catch (parseError) {
+        console.error("Failed to parse LLM output:", result);
+        return NextResponse.json({ findings: [] }); 
+    }
+
+    return NextResponse.json(parsedResult);
+
   } catch (error) {
     console.error("Audit Error:", error);
-    return NextResponse.json({ error: "Analysis failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Security analysis engine failed to process request." }, 
+      { status: 500 }
+    );
   }
 }
